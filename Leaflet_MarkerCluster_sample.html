@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Map with MarkerCluster</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <style>
+        #map {
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <script>
+        var map = L.map('map').setView([20, 0], 2);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        var markers = L.markerClusterGroup();
+
+        // 예제 데이터
+        var data = [
+            {lat: 51.5074, lng: -0.1278, count: 10},  // 런던
+            {lat: 48.8566, lng: 2.3522, count: 20},   // 파리
+            {lat: 40.7128, lng: -74.0060, count: 30}, // 뉴욕
+            {lat: 35.6895, lng: 139.6917, count: 40}  // 도쿄
+        ];
+
+        data.forEach(function(item) {
+            var marker = L.circleMarker([item.lat, item.lng], {
+                radius: item.count / 2, // 카운트에 비례한 동그라미 크기
+                color: 'red'
+            }).bindPopup('Count: ' + item.count);
+            markers.addLayer(marker);
+        });
+
+        map.addLayer(markers);
+    </script>
+</body>
+</html>

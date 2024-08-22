@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Highcharts Bubble Map</title>
+    <script src="https://code.highcharts.com/maps/highmaps.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script> <!-- 접근성 모듈 추가 -->
+    <script src="https://code.highcharts.com/mapdata/custom/world.js"></script>
+</head>
+<body>
+    <div id="container" style="width: 100%; height: 600px;"></div>
+    <script>
+        // Sample data for bubble chart
+        var bubbleData = [
+            {name: 'London', lat: 51.505, lon: -0.09, z: 20, count: 100},
+            {name: 'Paris', lat: 48.8566, lon: 2.3522, z: 30, count: 200},
+            {name: 'New York', lat: 40.7128, lon: -74.0060, z: 40, count: 300}
+        ];
+
+        Highcharts.mapChart('container', {
+            chart: {
+                map: 'custom/world'
+            },
+            title: {
+                text: 'Highcharts Bubble Map'
+            },
+            mapNavigation: {
+                enabled: true,
+                buttonOptions: {
+                    verticalAlign: 'bottom'
+                }
+            },
+            tooltip: {
+                pointFormat: '{point.name}: {point.count}'
+            },
+            series: [{
+                name: 'Countries',
+                color: '#E0E0E0',
+                enableMouseTracking: false
+            }, {
+                type: 'mapbubble',
+                name: 'Bubbles',
+                joinBy: ['name'],
+                data: bubbleData.map(function (item) {
+                    return {
+                        name: item.name,
+                        z: item.z,
+                        lat: item.lat,
+                        lon: item.lon,
+                        count: item.count
+                    };
+                }),
+                minSize: 4,
+                maxSize: '12%',
+                tooltip: {
+                    pointFormat: '{point.name}: {point.count}'
+                },
+                dataLabels: {
+                    enabled: true,
+                    format: '{point.count}',
+                    color: '#FFFFFF',
+                    style: {
+                        textOutline: 'none'
+                    }
+                }
+            }]
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenLayers 버블 맵 샘플</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css" type="text/css">
+  <style>
+    /* 지도 컨테이너의 높이 설정 */
+    #map {
+      height: 600px;
+    }
+
+    /* 버블 스타일 설정 */
+    .bubble {
+      width: 30px;
+      height: 30px;
+      background-color: rgba(255, 99, 132, 0.8);
+      border: 2px solid rgba(255, 99, 132, 1);
+      border-radius: 50%;
+      text-align: center;
+      font-size: 14px;
+      line-height: 30px;
+      color: white;
+      font-weight: bold;
+      position: relative;
+      z-index: 1;
+      cursor: pointer; /* 클릭 가능한 커서로 변경 */
+    }
+
+    /* 버블 텍스트 스타일 */
+    .bubble::after {
+      content: attr(data-value);
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 99, 132, 1);
+      color: white;
+      font-size: 12px;
+      padding: 4px;
+      border-radius: 4px;
+      display: none;
+      z-index: 2;
+    }
+
+    /* 버블 호버 시 텍스트 표시 */
+    .bubble:hover::after {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="map" class="map"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    // 샘플 데이터
+    var countries = [
+      { name: '미국', lonLat: [-95.7129, 37.0902], value: 100, continent: '북아메리카' },
+      { name: '캐나다', lonLat: [-106.3468, 56.1304], value: 50, continent: '북아메리카' },
+      { name: '멕시코', lonLat: [-102.5528, 23.6345], value: 80, continent: '북아메리카' },
+      { name: '브라질', lonLat: [-47.9292, -15.7801], value: 70, continent: '남아메리카' },
+      { name: '아르헨티나', lonLat: [-63.6167, -38.4161], value: 60, continent: '남아메리카' },
+      { name: '콜롬비아', lonLat: [-74.0721, 4.7110], value: 90, continent: '남아메리카' },
+      { name: '중국', lonLat: [104.1954, 35.8617], value: 120, continent: '아시아' },
+      { name: '일본', lonLat: [138.2529, 36.2048], value: 80, continent: '아시아' },
+      { name: '인도', lonLat: [78.9629, 20.5937], value: 110, continent: '아시아' },
+      { name: '남아프리카', lonLat: [24.9916, -28.4793], value: 60, continent: '아프리카' },
+      { name: '나이지리아', lonLat: [8.6753, 9.0820], value: 50, continent: '아프리카' },
+      { name: '이집트', lonLat: [30.8025, 26.8206], value: 40, continent: '아프리카' },
+      { name: '러시아', lonLat: [105.3188, 61.5240], value: 100, continent: '유럽' },
+      { name: '독일', lonLat: [10.4515, 51.1657], value: 70, continent: '유럽' },
+      { name: '프랑스', lonLat: [2.2137, 46.2276], value: 90, continent: '유럽' }
+    ];
+
+    // 대륙별 버블 데이터 초기화
+    var continents = {
+      '북아메리카': { lonLat: [-100, 40], count: 0 },
+      '남아메리카': { lonLat: [-60, -20], count: 0 },
+      '아시아': { lonLat: [100, 30], count: 0 },
+      '아프리카': { lonLat: [20, -20], count: 0 },
+      '유럽': { lonLat: [10, 50], count: 0 }
+    };
+
+    // 국가별 데이터를 대륙별로 묶어서 처리
+    countries.forEach(function(country) {
+      if (continents.hasOwnProperty(country.continent)) {
+        continents[country.continent].count += country.value;
+      }
+    });
+
+    // 기본 레이어
+    var baseLayer = new ol.layer.Tile({
+      source: new ol.source.OSM() // OpenStreetMap 타일 소스 사용
+    });
+
+    // 버블을 위한 벡터 레이어
+    var vectorSource = new ol.source.Vector();
+    var vectorLayer = new ol.layer.Vector({
+      source: vectorSource
+    });
+
+    // 초기 지도 영역 설정 (세계)
+    var extent = ol.proj.transformExtent([-180, -90, 180, 90], 'EPSG:4326', 'EPSG:3857');
+
+    // 지도 생성
+    var map = new ol.Map({
+      target: 'map',
+      layers: [baseLayer, vectorLayer], // 기본 레이어와 벡터 레이어 추가
+      view: new ol.View({
+        center: ol.proj.fromLonLat([0, 0]), // 초기 중심 좌표 설정
+        zoom: 2, // 초기 확대 수준 설정
+        extent: extent // 이동 가능한 지도 범위 설정
+      })
+    });
+
+    // 초기 버블 표시 함수
+    function showCountriesBubbles() {
+      // 기존의 버블 제거
+      vectorSource.clear();
+
+      // 국가별 버블 추가
+      countries.forEach(function(country) {
+        var bubbleStyle = new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: Math.sqrt(country.value) * 5, // 값에 따라 버블 크기 조절
+            fill: new ol.style.Fill({ color: 'rgba(255, 99, 132, 0.6)' }),
+            stroke: new ol.style.Stroke({ color: 'rgba(255, 99, 132, 1)', width: 2 })
+          }),
+          text: new ol.style.Text({
+            text: country.name + ' : ' + country.value.toString(), // 국가 이름과 카운트 숫자 설정
+            fill: new ol.style.Fill({ color: '#fff' }),
+            textAlign: 'center',
+            textBaseline: 'middle'
+          })
+        });
+
+        var bubbleFeature = new ol.Feature({
+          geometry: new ol.geom.Point(ol.proj.fromLonLat(country.lonLat)),
+          name: country.name, // 국가 이름 추가
+          value: country.value // 값 추가
+        });
+
+        bubbleFeature.setStyle(bubbleStyle);
+        vectorSource.addFeature(bubbleFeature);
+      });
+    }
+
+    // 대륙별 요약 표시 함수
+    function showContinentsSummary() {
+      // 기존의 버블 제거
+      vectorSource.clear();
+
+      // 대륙별 요약 버블 추가
+      for (var continent in continents) {
+        if (continents.hasOwnProperty(continent)) {
+          var bubbleStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+              radius: Math.sqrt(continents[continent].count) * 5, // 대륙별로 국가별 합계값에 따라 버블 크기 조절
+              fill: new ol.style.Fill({ color: 'rgba(50, 50, 255, 0.6)' }),
+              stroke: new ol.style.Stroke({ color: 'rgba(50, 50, 255, 1)', width: 2 })
+            }),
+            text: new ol.style.Text({
+              text: continent + ' : ' + continents[continent].count.toString(), // 대륙 이름과 합계 카운트
+              fill: new ol.style.Fill({ color: '#fff' }),
+              textAlign: 'center',
+              textBaseline: 'middle'
+            })
+          });
+
+          var bubbleFeature = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.fromLonLat(continents[continent].lonLat)),
+            name: continent, // 대륙 이름 추가
+            count: continents[continent].count // 합계값 추가
+          });
+
+          bubbleFeature.setStyle(bubbleStyle);
+          vectorSource.addFeature(bubbleFeature);
+        }
+      }
+    }
+
+    // 클릭 이벤트 핸들러
+    map.on('click', function(event) {
+      map.forEachFeatureAtPixel(event.pixel, function(feature, layer) {
+        var properties = feature.getProperties();
+        if (properties.name && properties.value) {
+          alert('국가:' + properties.name + ' 값:' + properties.value);
+        } else if (properties.name && properties.count) {
+          alert('대륙:' + properties.name + ' 합계:' + properties.count);
+        }
+      });
+    });
+
+    // 지도 이벤트
+    map.on('moveend', function() {
+      var view = map.getView();
+      var zoom = view.getZoom();
+      if (zoom >= 3) {
+        showCountriesBubbles(); // 국가별 표시
+      } else {
+        showContinentsSummary(); // 대륙별 표시
+      }
+    });
+
+    // 초기 설정
+    showContinentsSummary(); // 초기 대륙별 표시
+  </script>
+</body>
+</html>

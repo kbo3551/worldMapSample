@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Map with D3 Bubble Chart and Count</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+        }
+        .bubble {
+            fill-opacity: 0.6;
+            stroke: black;
+            stroke-width: 1px;
+        }
+        .label {
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            fill: white;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script>
+        // Create a map object and set the view to the center of the world with zoom level 2
+        var map = L.map('map').setView([0, 0], 2);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Sample data for bubble chart with counts
+        var bubbleData = [
+            {lat: 51.505, lon: -0.09, size: 20, color: 'red', count: 100},
+            {lat: 48.8566, lon: 2.3522, size: 30, color: 'blue', count: 200},
+            {lat: 40.7128, lon: -74.0060, size: 40, color: 'green', count: 300}
+        ];
+
+        // Add SVG layer to the map
+        L.svg().addTo(map);
+
+        // Select the SVG layer and append bubbles and labels
+        var svg = d3.select("#map").select("svg"),
+            g = svg.append("g").attr("class", "leaflet-zoom-hide");
+
+        bubbleData.forEach(function(d) {
+            // Convert lat/lon to pixel coordinates
+            var point = map.latLngToLayerPoint(new L.LatLng(d.lat, d.lon));
+            // Append circle for each data point
+            g.append("circle")
+                .attr("class", "bubble")
+                .attr("cx", point.x)
+                .attr("cy", point.y)
+                .attr("r", d.size)
+                .attr("fill", d.color);
+            // Append text label for each data point
+            g.append("text")
+                .attr("class", "label")
+                .attr("x", point.x)
+                .attr("y", point.y)
+                .attr("dy", ".3em")
+                .text(d.count);
+        });
+
+        // Update positions on map view reset
+        function update() {
+            bubbleData.forEach(function(d, i) {
+                var point = map.latLngToLayerPoint(new L.LatLng(d.lat, d.lon));
+                d3.select(g.selectAll("circle").nodes()[i])
+                    .attr("cx", point.x)
+                    .attr("cy", point.y);
+                d3.select(g.selectAll("text").nodes()[i])
+                    .attr("x", point.x)
+                    .attr("y", point.y);
+            });
+        }
+
+        map.on("zoomend", update);
+        map.on("moveend", update);
+    </script>
+</body>
+</html>

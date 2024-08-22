@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenLayers + ECharts Bubble Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/9.2.4/ol.min.css" integrity="sha512-bc9nJM5uKHN+wK7rtqMnzlGicwJBWR11SIDFJlYBe5fVOwjHGtXX8KMyYZ4sMgSL0CoUjo4GYgIBucOtqX/RUQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+    <!-- <script src="https://openlayers.org/en/latest/build/ol.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/openlayers/9.2.4/dist/ol.min.js" integrity="sha512-xXS2hdEzrUC2BFO0fIJ+d/bwScOLgN+W7psE4XXq6xULXjKFCskUNe8QOVVUsB7vtYRI5ZS0Ie4EgS4VzJQBkQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        var map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([0, 0]),
+                zoom: 2
+            })
+        });
+
+        // Sample data for bubbles
+        var bubbleData = [
+            { name: 'Tokyo', lat: 35.6895, lon: 139.6917, value: 37977000 },
+            { name: 'New York', lat: 40.7128, lon: -74.0060, value: 8175133 },
+            { name: 'London', lat: 51.5074, lon: -0.1278, value: 8908081 }
+            // Add more cities as needed
+        ];
+
+        // Add bubbles to the map
+        bubbleData.forEach(function(data) {
+            var bubble = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([data.lon, data.lat])),
+                name: data.name,
+                value: data.value
+            });
+
+            var bubbleStyle = new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: Math.sqrt(data.value) / 10000,
+                    fill: new ol.style.Fill({ color: 'rgba(255, 0, 0, 0.6)' })
+                })
+            });
+
+            bubble.setStyle(bubbleStyle);
+
+            var vectorSource = new ol.source.Vector({
+                features: [bubble]
+            });
+
+            var vectorLayer = new ol.layer.Vector({
+                source: vectorSource
+            });
+
+            map.addLayer(vectorLayer);
+
+            // Add click event to show ECharts chart
+            bubble.on('click', function(event) {
+                var selectedBubble = event.target.getProperties();
+                displayChart(selectedBubble);
+            });
+        });
+
+        // Function to display ECharts chart
+        function displayChart(bubble) {
+            var chart = echarts.init(document.getElementById('map'));
+
+            var option = {
+                title: {
+                    text: bubble.name + ': Population ' + bubble.value.toLocaleString()
+                },
+                series: [{
+                    type: 'scatter',
+                    coordinateSystem: 'geo',
+                    data: [[bubble.lon, bubble.lat, bubble.value]],
+                    symbolSize: function(val) {
+                        return Math.sqrt(val[2]) / 10000;
+                    },
+                    label: {
+                        emphasis: {
+                            show: true,
+                            formatter: function(params) {
+                                return params.data[2];
+                            },
+                            position: 'top'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'rgba(255, 0, 0, 0.6)'
+                        }
+                    }
+                }]
+            };
+
+            chart.setOption(option);
+        }
+    </script>
+</body>
+</html>
